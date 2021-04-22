@@ -18,9 +18,20 @@ WITH terms AS (
         *
         , 'psychcentral' AS website
     FROM hl.wordpress.v_wp_4_terms
-)
+),
 
-SELECT posts.post_type,
+article_meta AS (
+    SELECT
+        website
+        , post_id
+        , MAX(CASE WHEN meta_key = 'all_assets_delivered' THEN meta_value END) AS asset_delivery_status
+    FROM hl.wordpress.wp_postmeta
+    GROUP BY
+        1, 2
+    )
+
+SELECT article_meta.asset_delivery_status,
+       posts.post_type,
        posts.post_status,
        pm.website,
        pm.post_id,
@@ -49,6 +60,9 @@ LEFT JOIN hl.wordpress.wp_post posts
 LEFT JOIN terms
     ON pm.website = terms.website
     AND pm.asset_type_id = terms.term_id
+LEFT JOIN article_meta
+    ON article_meta.website = pm.website
+    AND article_meta.post_id::varchar(100) = pm.linked_post_id
 LEFT JOIN hl.wordpress.v_wp_users users1
     ON pm.requester_id = users1.id
 LEFT JOIN hl.wordpress.v_wp_users users2
